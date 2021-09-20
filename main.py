@@ -7,6 +7,7 @@ from model import ConvRec
 from tqdm import tqdm
 import pickle
 from util import *
+import zipfile
 import torch
 import torch.optim as optim
 
@@ -83,7 +84,10 @@ if __name__ == '__main__':
             pickle.dump(dataset, pickle_out)
             pickle_out.close()
     else:
-        if os.path.exists(os.path.join("data/test_data", args.dataset + '.pkl')):
+        if os.path.exists(os.path.join("data/test_data", args.dataset + '.pkl.zip')):
+            with zipfile.ZipFile(os.path.join("data/test_data", args.dataset + '.pkl.zip'), 'r') as zip_ref:
+                zip_ref.extractall("data/test_data")
+
             pickle_in = open(os.path.join("data/test_data", args.dataset + '.pkl'),"rb")
             dataset = pickle.load(pickle_in)
             print("Length of dataset is: ",len(dataset))
