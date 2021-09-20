@@ -36,6 +36,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_epochs', default=30, type=int)
     parser.add_argument('--num_neg_samples', default = 400, type=int) #Note: 100 is sufficient
     parser.add_argument('--eval_epoch', default = 5, type=int)
+    parser.add_argument('--testing', default=False, action='store_true')
+    parser.add_argument('--test_data', nargs='+')
     
     # Check if your system supports CUDA
     use_cuda = torch.cuda.is_available()
@@ -71,19 +73,34 @@ if __name__ == '__main__':
     f.close()
 
     
-    if os.path.exists("data/"+args.dataset + '.pkl'):
-        pickle_in = open("data/"+args.dataset+".pkl","rb")
-        dataset = pickle.load(pickle_in)
+    if not args.testing:
+        if os.path.exists("data/"+args.dataset + '.pkl'):
+            pickle_in = open("data/"+args.dataset+".pkl","rb")
+            dataset = pickle.load(pickle_in)
+        else:
+            dataset = data_partition(args.dataset)
+            pickle_out = open("data/"+args.dataset+".pkl","wb")
+            pickle.dump(dataset, pickle_out)
+            pickle_out.close()
     else:
-        dataset = data_partition(args.dataset)
-        pickle_out = open("data/"+args.dataset+".pkl","wb")
-        pickle.dump(dataset, pickle_out)
-        pickle_out.close()
+        if os.path.exists(os.path.join("data/test_data", args.dataset + '.pkl')):
+            pickle_in = open(os.path.join("data/test_data", args.dataset + '.pkl'),"rb")
+            dataset = pickle.load(pickle_in)
+            print("Length of dataset is: ",len(dataset))
+        else:
+            dataset = data_partition(args.dataset)
+            pickle_out = open("data/test_data"+args.dataset+".pkl","wb")
+            pickle.dump(dataset, pickle_out)
+            pickle_out.close()
     
+    # print(dataset)
     
-    [train, valid, test, itemnum] = dataset
+    if not args.testing:
+        [train, valid, test, itemnum] = dataset
+    else:
+        [train, valid, itemnum] = dataset
     
-    print("Number of sessions:",len(train)+len(valid)+len(test))
+    print("Number of sessions:",len(train)+len(valid)+(len(test) if not args.testing else 0))
     print("Number of items:", itemnum)
 
     action = 0
@@ -93,13 +110,13 @@ if __name__ == '__main__':
     for i in valid:
         action += np.count_nonzero(i)
     
-    
-    for i in test:
-        action += np.count_nonzero(i)
+    if not args.testing:
+        for i in test:
+            action += np.count_nonzero(i)
 
     print("Number of actions:", action)
     
-    print("Average length of sessions:", action/(len(train)+len(valid)+len(test)))
+    print("Average length of sessions:", action/(len(train)+len(valid)+(len(test) if not args.testing else 0)))
 
 
     num_batch = len(train) // args.batch_size
@@ -111,7 +128,8 @@ if __name__ == '__main__':
     conv_model = conv_model.to(args.computing_device, non_blocking=True)
     
     # Note: testing a pretrained model
-    if os.path.exists(result_path+"pretrained_model.pth"):
+    # Removing this module for bias testing
+    if os.path.exists(result_path+"pretrained_model.pth") and not args.testing:
         conv_model.load_state_dict(torch.load(result_path+"pretrained_model.pth"))       
         t_test = evaluate(conv_model, test, itemnum, args, num_workers=4)
         model_performance = "Model performance on test: "+str(t_test)
@@ -198,13 +216,27 @@ if __name__ == '__main__':
     
     conv_model = conv_model.to(args.computing_device)
         
-    t_test = evaluate(conv_model, test, itemnum, args, num_workers=4)
+    if args.testing:
+        # test set can either be 'clicks' or 'buys'
+        for test_set in args.test_data:
+            with open(os.path.join('data/test_data', args.dataset+'_'+test_set)) as test_file:
+                test = pickle.load(test_file)
+            t_test = evaluate(conv_model, test, itemnum, args, num_workers=4)
 
-    model_performance = "Model performance on test: "+str(t_test)
-    print(model_performance)
+            model_performance = "Model performance on " + test_set + " test: "+str(t_test)
+            print(model_performance)
+            
+            f.write(model_performance+'\n\n')
+            f.flush()
+    else:
+        t_test = evaluate(conv_model, test, itemnum, args, num_workers=4)
 
-    f.write(model_performance+'\n')
-    f.flush()
+        model_performance = "Model performance on test: "+str(t_test)
+        print(model_performance)
+
+        f.write(model_performance+'\n')
+        f.flush()
+
     f.close()
 
     print("Done")

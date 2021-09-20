@@ -34,4 +34,6 @@ If you want to experiment with changing other parameters, following are the impo
 '--layers': Number of convolution layers (default=2) 
 '--decoder_kernel_size_list': Kernel size in each of the convolution layer (default = [5, 5]). Note each entry in this list correspoend to kernel size of each convolution layer
 '--num_neg_samples': Number of negative samples for calculating loss (default = 400)
+'--testing': denotes whether or not the model is being run in bias testing mode
+'--test_data': list containing elements that are either 'clicks' or 'buys' denoting which test sets to run the model on
 ```
