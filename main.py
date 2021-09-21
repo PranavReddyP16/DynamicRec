@@ -223,7 +223,7 @@ if __name__ == '__main__':
     if args.testing:
         # test set can either be 'clicks' or 'buys'
         for test_set in args.test_data:
-            with open(os.path.join('data/test_data', args.dataset+'_'+test_set+'.pkl')) as test_file:
+            with open(os.path.join('data/test_data', args.dataset+'_'+test_set+'.pkl'), 'rb') as test_file:
                 test = pickle.load(test_file)
             t_test = evaluate(conv_model, test, itemnum, args, num_workers=4)
 
