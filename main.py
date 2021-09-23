@@ -97,7 +97,7 @@ if __name__ == '__main__':
             pickle.dump(dataset, pickle_out)
             pickle_out.close()
     
-    # print(dataset)
+    # print(len(dataset))
     
     if not args.testing:
         [train, valid, test, itemnum] = dataset
